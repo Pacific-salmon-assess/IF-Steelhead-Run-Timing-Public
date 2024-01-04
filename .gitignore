@@ -47,3 +47,9 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+
+
+#Other filetypes 
+*.RDS
+*.pdf
