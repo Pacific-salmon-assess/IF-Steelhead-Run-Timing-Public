@@ -269,7 +269,33 @@ p0 <- ggplot(All_Windows) +
   ggtitle("95% Migration Window")
 
 p0
-ggsave("Outputs/3_Plots/Window_comparison_All.png", width = 8, height = 11, units = "in")
+#ggsave("Outputs/3_Plots/Window_comparison_All.png", width = 8, height = 11, units = "in")
+
+#Hier, asym. normale, Binomiale negative
+#Hier, normale, bimomiale negative 
+#Independente, normale, poisson
+
+p0_french <- ggplot(All_Windows) +
+  geom_rect(aes(ymin=min(Year), ymax=max(Year), 
+                xmin = hD_025, xmax=hD_975), fill='grey', alpha=0.1) +
+  geom_point(aes(y=Year, x=D_50), size = 0.5) +
+  geom_segment(aes(y=Year, x=D_025, xend=D_975, yend=Year), size = 0.25) +
+  #geom_line(aes(y=Year, x=hD_50), size = 0.25, col="red") +
+  geom_vline(xintercept=ANorm_025, linetype="dashed", color = "red")+
+  geom_vline(xintercept=ANorm_975, linetype="dashed", color = "red")+
+  geom_point(data = outs, aes(y=Year, x=Day, size=Catch), col="blue", alpha=0.5) +
+  facet_wrap(~Model, ncol=1)  +
+  xlab("Date")+
+  ylab("Année")+
+  labs(size  = "Prise")+
+  theme_bw()+
+  theme(legend.position = c(.9,.88), 
+        legend.background = element_blank())+
+  scale_x_continuous(breaks=c(214, 244, 274, 305, 335),
+                     labels=c("1 août", "1 sept", "1 oct", "1 nov", "1 déc")) +
+  ggtitle("95% Migration Window")
+
+p0_french
 
 #Calculate proportion of catch outside window
 Yearly_Catch <- Catch %>% group_by(Year) %>% summarise(Yearly_Catch = sum(SH_Catch))
@@ -438,6 +464,21 @@ a <- ggplot(Catch[Catch$SH_Catch>0,])+
   scale_color_discrete(labels = c("Chum Test", "Chinook Test"))
 a
 
+a_french <- ggplot(Catch[Catch$SH_Catch>0,])+
+  geom_point(aes(x=Day, y=SH_Catch, fill = Fishery, color = Fishery,shape = Fishery),size = 2, alpha = 0.5)+
+  theme_bw()+
+  xlab("Date")+
+  ylab("Prise de truite arc-en-ciel anadrome")+
+  scale_x_continuous(breaks=c(213,244, 274, 305, 335),
+                     labels=c("1 août", "1 sept", "1 oct", "1 nov", "1 déc"), limits = c(213,335))+
+  theme(legend.position = c(.15, .8))+
+  labs(fill  = "Pêche d'essai", color = "Pêche d'essai", shape = "Pêche d'essai")+
+  scale_shape_discrete(labels = c("Saumon kéta", "Saumon quinnat"))+
+  scale_fill_discrete(labels = c("Saumon kéta", "Saumon quinnat"))+
+  scale_color_discrete(labels = c("Saumon kéta", "Saumon quinnat"))
+
+a_french 
+
 #Ridgeline plots of catch for every year 
 b <- ggplot(Catch, aes(x=Day, y=Year, height = SH_Catch, group = Year))+ 
   geom_ridgeline(aes(fill = Year, color = Year), alpha = 0.5)+ 
@@ -451,6 +492,19 @@ b <- ggplot(Catch, aes(x=Day, y=Year, height = SH_Catch, group = Year))+
   theme(legend.position = c(.2, .85), legend.direction = "horizontal")
 b
 
+b_french <- ggplot(Catch, aes(x=Day, y=Year, height = SH_Catch, group = Year))+ 
+  geom_ridgeline(aes(fill = Year, color = Year), alpha = 0.5)+ 
+  scale_x_continuous(breaks=c(213,244, 274, 305, 335),
+                     labels=c("1 août", "1 sept", "1 oct", "1 nov", "1 déc"), limits = c(213,335))+
+  scale_y_reverse()+
+  xlab("Date")+
+  ylab("Année")+
+  scale_color_viridis_c(direction = -1, name = "Année")+
+  scale_fill_viridis_c(direction = -1, name = "Année")+
+  theme_bw()+
+  theme(legend.position = c(.2, .85), legend.direction = "horizontal")
+b_french
+
 #Convert year to numeric
 annual_return$Year <- as.numeric(annual_return$Year)
 #Plot annual return time series 
@@ -463,9 +517,23 @@ c <- ggplot(annual_return, aes(x=Year, y = N))+
   theme(plot.margin = unit(c(0.25,0.25,0.25,0.65), "cm"))
 c
 
+c_french <- ggplot(annual_return, aes(x=Year, y = N))+
+  geom_point()+
+  geom_line()+
+  theme_bw()+
+  scale_x_continuous(breaks=c(1983, 1993, 2003, 2013,2022))+
+  ylab("Remontes annuelles")+
+  xlab("Année")+
+  theme(plot.margin = unit(c(0.25,0.25,0.25,0.65), "cm"))
+c_french
+
 #Create multipanel plot
 plot_grid(a,b,c,ncol = 1, rel_heights = c(2,2,1), labels = "AUTO")
 ggsave(filename = "Outputs/3_Plots/Catch_multipanel.png", height = 8, width = 5.5, units = "in")
+
+#Create french figure 
+plot_grid(a_french,b_french,c_french,ncol = 1, rel_heights = c(2,2,1), labels = "AUTO")
+ggsave(filename = "Outputs/3_Plots/Catch_multipanel_french.png", height = 8, width = 5.5, units = "in")
 
 #===========================================
 #Plot residuals 
