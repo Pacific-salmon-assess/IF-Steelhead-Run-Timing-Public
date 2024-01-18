@@ -271,9 +271,15 @@ p0 <- ggplot(All_Windows) +
 p0
 #ggsave("Outputs/3_Plots/Window_comparison_All.png", width = 8, height = 11, units = "in")
 
-#Hier, asym. normale, Binomiale negative
-#Hier, normale, bimomiale negative 
-#Independente, normale, poisson
+#names in french
+#Normale asym. hiér., binomiale nég.
+#Normale hiér., binomiale nég.
+#Normale indép., poisson
+
+All_Windows$Model_french <- recode_factor(All_Windows$Model, "Hier. Asym. Normal, Neg. Binomial" = "Normale asym. hiér., binomiale nég.",
+                                       "Hier. Normal, Neg. Binomial" = "Normale hiér., binomiale nég.",
+                                       "Indep. Normal, Poisson" = "Normale indép., poisson")
+
 
 p0_french <- ggplot(All_Windows) +
   geom_rect(aes(ymin=min(Year), ymax=max(Year), 
@@ -284,7 +290,7 @@ p0_french <- ggplot(All_Windows) +
   geom_vline(xintercept=ANorm_025, linetype="dashed", color = "red")+
   geom_vline(xintercept=ANorm_975, linetype="dashed", color = "red")+
   geom_point(data = outs, aes(y=Year, x=Day, size=Catch), col="blue", alpha=0.5) +
-  facet_wrap(~Model, ncol=1)  +
+  facet_wrap(~Model_french, ncol=1)  +
   xlab("Date")+
   ylab("Année")+
   labs(size  = "Prise")+
@@ -293,8 +299,9 @@ p0_french <- ggplot(All_Windows) +
         legend.background = element_blank())+
   scale_x_continuous(breaks=c(214, 244, 274, 305, 335),
                      labels=c("1 août", "1 sept", "1 oct", "1 nov", "1 déc")) +
-  ggtitle("95% Migration Window")
+  ggtitle("Période de 95 % de la montaison")
 
+#periode de 95% de la migration?
 p0_french
 
 #Calculate proportion of catch outside window
@@ -316,22 +323,24 @@ write.csv(Outs_Summary, "Outputs/2_DataOut/Catch_Outside_Windows.csv")
 
 # create same plot with only two hier Models
 # doesn't seem to like separate, join all together
-Mods_In_Order <- c("Hier. Asym. Normal, Neg. Binomial", "Hier. Normal, Neg. Binomial")
+#Mods_In_Order <- c("Hier. Asym. Normal, Neg. Binomial", "Hier. Normal, Neg. Binomial")
 
 # Plots curves on toNorm_Hparams$rt_m_m + minDay-1p
 # grab global curve params from Anorm_Params and Norm_Params - or draws from posterior?
-Norm_Params <- Summary_Hier_NB_HQ$Date_Dists_Ints %>% filter(  Year == 1983)
+Norm_Params <- Summary_Hier_NB_HQ$Date_Dists_Ints %>% filter(Year == 1983)
 ANorm_Params <- Summary_Hier_NB_ANorm$Date_Dists_Ints %>% filter(Year == 1983)
      
 NormDist <- data.frame(
     x = seq(220, 350, by = 0.1),
     y = dnorm(seq(220, 350, by = 0.1), mean = Norm_Params$rt_m_m+ minDay-1,  sd = Norm_Params$rt_sd_m),
-    Model = "Hier. Normal, Neg. Binomial"
+    Model = "Hier. Normal, Neg. Binomial",
+    Model_french = "Normale hiér., binomiale nég."
 )
 ANormDist <- data.frame(
   x = seq(220, 350, by = 0.1),
   y = ddnorm(seq(220, 350, by = 0.1), mean = unique(ANorm_Params$rt_m_m) + minDay-1, sigma = as.numeric(ANorm_Params$rt_sd)),
-  Model = "Hier. Asym. Normal, Neg. Binomial"
+  Model = "Hier. Asym. Normal, Neg. Binomial",
+  Model_french = "Normale asym. hiér., binomiale nég."
 )
 
 #Change model names for plotting
@@ -350,9 +359,9 @@ Dists <- rbind(NormDist, ANormDist) %>%
 
 #Plot the global windows for the two hierarchical models 
 p2 <- ggplot(data = Dists) +
-       geom_polygon( aes(x = x, y = Win95), fill = "black", alpha=0.2) +
-       geom_polygon( aes(x = x, y = Win90), fill = "black", alpha=0.3) +
-       geom_polygon( aes(x = x, y = Win80), fill = "black", alpha=0.4) +
+       geom_polygon(aes(x = x, y = Win95), fill = "black", alpha=0.2) +
+       geom_polygon(aes(x = x, y = Win90), fill = "black", alpha=0.3) +
+       geom_polygon(aes(x = x, y = Win80), fill = "black", alpha=0.4) +
        geom_line(aes(x,y)) +
        facet_wrap(~Model, ncol=1)+
        scale_x_continuous(breaks=c(244, 274, 305, 335),expand = c(0,0))+
@@ -360,7 +369,6 @@ p2 <- ggplot(data = Dists) +
                      labels=c(""))+
        ggtitle("Average Run-Timing with 95%, 90%, and 80% Windows") +
        theme(plot.title = element_text(hjust = 1))+
-       xlab("Date") +
        theme_bw()+
        theme(plot.margin=unit(c(2.1,1.9,4.5,5), "mm"),
              axis.text = element_blank(), 
@@ -370,6 +378,30 @@ p2 <- ggplot(data = Dists) +
                            
          #guides(color = guide_legend(order = 1, override.aes = list(shape = c(16, 16, NA), 
                            #  linetype = c("blank", "solid", "solid"))))
+p2
+
+
+p2_french <- ggplot(data = Dists) +
+  geom_polygon(aes(x = x, y = Win95), fill = "black", alpha=0.2) +
+  geom_polygon(aes(x = x, y = Win90), fill = "black", alpha=0.3) +
+  geom_polygon(aes(x = x, y = Win80), fill = "black", alpha=0.4) +
+  geom_line(aes(x,y)) +
+  facet_wrap(~Model_french, ncol=1)+
+  scale_x_continuous(breaks=c(244, 274, 305, 335),expand = c(0,0))+
+  scale_y_continuous(breaks=c(0),
+                     labels=c(""))+
+  ggtitle("Montaison moyenne, périodes de 95 %, 90 %, et 80 %") +
+  theme(plot.title = element_text(hjust = 1))+
+  theme_bw()+
+  theme(plot.margin=unit(c(2.1,1.9,4.5,5), "mm"),
+        axis.text = element_blank(), 
+        axis.ticks = element_blank(),
+        axis.title = element_blank())
+
+p2_french
+
+#Montaison moyenne, périodes de 95 %, 90 %, et 80 %
+
 
 #Get run timing curves for the independent poisson model
 IndepParams <- Summary_Indep_Poisson$Date_Dists_Ints
@@ -398,24 +430,46 @@ p3 <- ggplot(IndepNormDist) +
                      limits=c(220,350), expand = c(0,0))+
   scale_y_continuous(breaks=c(0),labels=c(""), limits = c(-0.0035, 0.052), expand = c(NA, 0))+
   xlab("Date")+
-  ylab("")+
   theme_bw()+
   theme(plot.margin=unit(c(-3.5,1.9,2,4.2), "mm"), axis.title.y = element_blank(),
         axis.ticks.y = element_blank())+
   annotate("rect", xmin = 220, xmax = 350, ymin = 0.047, ymax = 0.052,
            color="black", fill = "#D9D9D9")+ 
   annotate(label = "Indep. Normal, Poisson", x= 283, y=0.0495, geom="text", size = 3)
-ggsave(file= "Outputs/3_Plots/indep_poisson.png")
+#ggsave(file= "Outputs/3_Plots/indep_poisson.png")
+p3
 
+
+p3_french <- ggplot(IndepNormDist) +
+  geom_line(aes(x,y, group = Year), alpha = 0.5)+
+  geom_segment(data = Indep_Mean_Window, aes(x = hD_025, y = -0.002 , yend = -0.002, xend = hD_975), alpha = 0.2, linewidth = 2)+
+  geom_segment(data = Indep_Mean_Window, aes(x = hD_05, y = -0.002 , yend = -0.002, xend = hD_95), alpha = 0.3, linewidth = 2)+
+  geom_segment(data = Indep_Mean_Window, aes(x = hD_10, y = -0.002 , yend = -0.002, xend = hD_90), alpha = 0.4, linewidth = 2)+
+  scale_x_continuous(breaks=c( 244, 274, 305, 335),
+                     labels=c("1 sept", "1 oct", "1 nov", "1 déc"),
+                     limits=c(220,350), expand = c(0,0))+
+  scale_y_continuous(breaks=c(0),labels=c(""), limits = c(-0.0035, 0.052), expand = c(NA, 0))+
+  xlab("Date")+ 
+  theme_bw()+
+  theme(plot.margin=unit(c(-3.5,1.9,2,4.2), "mm"), axis.title.y = element_blank(),
+        axis.ticks.y = element_blank())+
+  annotate("rect", xmin = 220, xmax = 350, ymin = 0.047, ymax = 0.052,
+           color="black", fill = "#D9D9D9")+ 
+  annotate(label = "Normale indép., poisson", x= 283, y=0.0495, geom="text", size = 3)
+#ggsave(file= "Outputs/3_Plots/indep_poisson.png")
+p3_french
 
 #Create 6-panel comparison plot with p1, p2, p3
 p4 <- grid.arrange(p2, p3, ncol = 1, heights = c(2,1))
+p4_french <- grid.arrange(p2_french, p3_french, ncol = 1, heights = c(2,1))
 
 png("Outputs/3_Plots/Run_Timing_6panel_labelled.png", width = 10, height = 9, units = "in", res = 300)
 plot_grid(p0,p4,ncol = 2, labels = c('A', 'B'))
 dev.off()
 
-
+png("Outputs/3_Plots/Run_Timing_6panel_labelled_french.png", width = 10, height = 9, units = "in", res = 300)
+plot_grid(p0_french,p4_french,ncol = 2, labels = c('A', 'B'))
+dev.off()
 
 #=====================================================================
 #Multipanel plot with all the priors 
@@ -425,17 +479,17 @@ y1 <- dnorm(x1, 280, sd=40)
 Priors_DF <- data.frame(x=x1, y=y1, Dist = "Normal(280, 40)")
 # half-t 15,2
 x2 <- seq(0, 50, by=0.1)
-y2 <- dht(x2, nu=2, sigma=15)
+y2 <- extraDistr::dht(x2, nu=2, sigma=15)
 Priors_DF <- rbind(Priors_DF, data.frame(x=x2, y=y2, Dist="Half-t(15, 2)"))
 # half-t 7.5, 2
 x3 <- seq(0, 50, by=0.1)
-y3 <- dht(x3, nu=2, sigma=7.5)
+y3 <- extraDistr::dht(x3, nu=2, sigma=7.5)
 Priors_DF <- rbind(Priors_DF, data.frame(x=x3, y=y3, Dist="Half-t(7.5, 2)"))
 x4 <- seq(0.0001, 0.2, by = 0.0001) 
 y4 <- dilogit(x4, mu = -3, tau = 0.8) 
 Priors_DF <- rbind(Priors_DF, data.frame(x=x4, y=y4, Dist="logit(Normal(-3, 1/sqrt(0.8)))")) 
 
-pdf("Outputs/3_Plots/Priors_Multipanel.pdf", width=10, height=8)
+png("Outputs/3_Plots/Priors_Multipanel.png", width=10, height=8, units = "in", res = 300)
 ggplot(Priors_DF) +
   geom_line(aes(x, y)) +
   facet_wrap(~Dist, scales="free")+
@@ -443,6 +497,34 @@ ggplot(Priors_DF) +
                      labels=c("")) +
   ylab("Density") +
   xlab("Value") +
+  theme_bw()
+dev.off()
+
+#French
+#Use scales::label_comma for french decimal display
+Priors_DF$Dist_french <- recode_factor(Priors_DF$Dist, "Normal(280, 40)" = "Normale(280, 40)",
+                                       "Half-t(15, 2)" = "Demi-Student(15, 2)",
+                                       "Half-t(7.5, 2)" = "Demi-Student(7.5, 2)",               
+                                       "logit(Normal(-3, 1/sqrt(0.8)))" = "logit(Normale(-3, 1/racine(0.8)))")
+
+# "Normal(280, 40)" = Normale(280, 40)
+# "Half-t(15, 2)" = "Demi-Student(15, 2)
+# "Half-t(7.5, 2)" = "Demi-Student(7.5, 2)               
+# "logit(Normal(-3, 1/sqrt(0.8)))" = "logit(Normale(-3, 1/racine(0.8)))"
+
+#Change these to the right order 
+
+png("Outputs/3_Plots/Priors_Multipanel_french.png", width=10, height=8, units = "in", res = 300)
+ggplot(Priors_DF) +
+  geom_line(aes(x, y)) +
+  facet_wrap(~ factor(Dist_french,levels = c("Demi-Student(15, 2)", "Demi-Student(7.5, 2)",
+                                               "logit(Normale(-3, 1/racine(0.8)))", "Normale(280, 40)")), scales="free")+
+  scale_y_continuous(breaks=c(0),
+                     labels=c("")) +
+  scale_x_continuous(labels = scales::label_comma(big.mark = ".",
+                                                  decimal.mark = ","))+
+  ylab("Densité") +
+  xlab("Valeur") +
   theme_bw()
 dev.off()
 

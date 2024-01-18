@@ -67,6 +67,7 @@ fc <- sf::st_read("C:\\Users\\POTAPOVAA\\Documents\\fwa_network_fraser_historic.
 #Subset to stream order > 5 for mapping 
 fc <- fc[fc$STREAM_ORDER > 5,]
 
+
 #Create map 
 map <- ggplot(data = bc)+
   #geom_sf()+
@@ -79,8 +80,30 @@ map <- ggplot(data = bc)+
   xlim(c(1152862,1421635))+
   ylim(c(454543,796090))+
   xlab("Longitude")+
-  ylab("Latitude")  
+  ylab("Latitude")
+
 map
+# Add french labels: 
+# makeLong <- function(x) paste0(-x, "\u00b0O")
+# 
+# map + scale_x_continuous(labels = makeLong)
+# 
+# map <- ggplot(data = bc)+
+#   #geom_sf()+
+#   geom_sf(data = us_can)+
+#   geom_sf(data = fr)+
+#   geom_sf(data = fc)+
+#   geom_sf(data = points_geo, color = "black")+
+#   scale_x_continuous(labels = makeLong)+
+#   #geom_sf_text(data = points_geo, aes(label = name))+
+#   xlim(c(1152862,1421635))+
+#   ylim(c(454543,796090))+
+#   theme_bw()+
+#   xlab("Longitude")+
+#   ylab("Latitude")
+# 
+# map
+
 
 #Create inset of province with box
 inset <- ggplot(data = bc)+
