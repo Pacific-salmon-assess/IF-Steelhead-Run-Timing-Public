@@ -165,25 +165,26 @@ if(Summaries == "Run"){
 #--------------------------------------------------------------------------------------------
 #Model comparison
 #--------------------------------------------------------------------------------------------
-# Can we compare theseModels with DIC?
+# Can we compare these Models with DIC?
 if(Models == "Run" | Models == "Read"){
   JagsMods <- list(
-    "Hier. Normal, Neg. Binomial"= JagsFit_Hier_NB_HQ$BUGSoutput$DIC,
-    "Hier. Asym. Normal, Neg. Binomial" = JagsFit_Hier_NB_ANorm$BUGSoutput$DIC,
-    "Indep. Normal, Poisson" = JagsFit_Indep_Poisson$BUGSoutput$DIC
+    "Hierarchical Normal"= JagsFit_Hier_NB_HQ$BUGSoutput$DIC,
+    "Hierarchical Asymmetric Normal" = JagsFit_Hier_NB_ANorm$BUGSoutput$DIC,
+    "Independent Normal" = JagsFit_Indep_Poisson$BUGSoutput$DIC
   )
   
   DIC_DF <- data.frame(Mod = names(JagsMods), DIC = unlist(JagsMods))
   
   JagsMods_pD <- list(
-    "Hier. Normal, Neg. Binomial"= JagsFit_Hier_NB_HQ$BUGSoutput$pD,
-    "Hier. Asym. Normal, Neg. Binomial" = JagsFit_Hier_NB_ANorm$BUGSoutput$pD,
-    "Indep. Normal, Poisson"  = JagsFit_Indep_Poisson$BUGSoutput$pD
+    "Hierarchical Normal"= JagsFit_Hier_NB_HQ$BUGSoutput$pD,
+    "Hierarchical Asymmetric Normal" = JagsFit_Hier_NB_ANorm$BUGSoutput$pD,
+    "Independent Normal"  = JagsFit_Indep_Poisson$BUGSoutput$pD
   )
   
   DIC_DF$pD <- unlist(JagsMods_pD)
   write.csv(DIC_DF, "Outputs/2_DataOut/DIC_DF.csv", row.names=F)
 }
+
 
 
 
@@ -232,20 +233,20 @@ for(mm in 1:length(Mods)){
 # Change Model names to make more readable and for plotting
 outs <- ungroup(outs) %>%
   mutate(Model = fct_recode(as.factor(Model),
-                    "Indep. Normal, Poisson" = "Indep_Poisson",
-                     "Hier. Normal, Neg. Binomial" = "Hier_NB_HQ",
-                    "Hier. Asym. Normal, Neg. Binomial" = "Hier_NB_ANorm"))
+                            "Independent Normal" = "Indep_Poisson",
+                            "Hierarchical Normal" = "Hier_NB_HQ",
+                            "Hierarchical Asymmetric Normal" = "Hier_NB_ANorm"))
 
 #Change the column names for yearly windows for merging and plotting
 names(Yearly_Winds) <- gsub(x = names(Yearly_Winds), pattern = "h", replacement = "")  
 
 #Join all the windows together 
 All_Windows <- Yearly_Winds %>% 
-      full_join(Global_Winds, join_by(Model), relationship = "many-to-one") %>%
-      mutate(Model = fct_recode(as.factor(Model),
-                            "Indep. Normal, Poisson" = "Indep_Poisson",
-                            "Hier. Normal, Neg. Binomial" = "Hier_NB_HQ",
-                            "Hier. Asym. Normal, Neg. Binomial" = "Hier_NB_ANorm"))
+  full_join(Global_Winds, join_by(Model), relationship = "many-to-one") %>%
+  mutate(Model = fct_recode(as.factor(Model),
+                            "Independent Normal" = "Indep_Poisson",
+                            "Hierarchical Normal" = "Hier_NB_HQ",
+                            "Hierarchical Asymmetric Normal" = "Hier_NB_ANorm"))
 ANorm_025 <- Global_Winds$hD_025[Global_Winds$Model == "Hier_NB_ANorm"]
 ANorm_975 <- Global_Winds$hD_975[Global_Winds$Model == "Hier_NB_ANorm"]
 
@@ -270,6 +271,38 @@ p0 <- ggplot(All_Windows) +
 
 p0
 #ggsave("Outputs/3_Plots/Window_comparison_All.png", width = 8, height = 11, units = "in")
+
+#Remove red dashed lines from this plot
+p0_nolines <- ggplot(All_Windows) +
+  geom_rect(aes(ymin=min(Year), ymax=max(Year), 
+                xmin = hD_025, xmax=hD_975), fill='grey', alpha=0.1) +
+  geom_point(aes(y=Year, x=D_50), size = 0.5) +
+  geom_segment(aes(y=Year, x=D_025, xend=D_975, yend=Year), size = 0.25) +
+  geom_point(data = outs, aes(y=Year, x=Day, size=Catch), col="blue", alpha=0.5) +
+  facet_wrap(~Model, ncol=1)+
+  xlab("Date")+
+  theme_bw()+
+  theme(legend.position = c(.9,.88), 
+        legend.background = element_blank())+
+  scale_x_continuous(breaks=c(214, 244, 274, 305, 335),
+                     labels=c("Aug 1", "Sept 1", "Oct 1", "Nov 1", "Dec 1")) +
+  ggtitle("95% Migration Window")
+p0_nolines
+
+#Create a single panel plot for the asym model only
+p0_asym <- ggplot(All_Windows[All_Windows$Model == "Hierarchical Asymmetric Normal",]) +
+  geom_rect(aes(ymin=min(Year), ymax=max(Year), 
+                xmin = hD_025, xmax=hD_975), fill='grey', alpha=0.1) +
+  geom_point(aes(y=Year, x=D_50), size = 0.5) +
+  geom_segment(aes(y=Year, x=D_025, xend=D_975, yend=Year), size = 0.25) +
+  geom_point(data = outs[outs$Model == "Hierarchical Asymmetric Normal",], aes(y=Year, x=Day, size=Catch), col="blue", alpha=0.5) +
+  xlab("Date")+
+  theme_bw()+
+  scale_x_reverse(breaks=c(214, 244, 274, 305, 335),
+                  labels=c("Aug 1", "Sept 1", "Oct 1", "Nov 1", "Dec 1")) +
+  coord_flip()
+p0_asym
+ggsave("Outputs/3_Plots/Run_Timing_asym.png", width = 5, height = 3, units = "in")
 
 #names in french
 #Normale asym. hiér., binomiale nég.
@@ -323,7 +356,7 @@ write.csv(Outs_Summary, "Outputs/2_DataOut/Catch_Outside_Windows.csv")
 
 # create same plot with only two hier Models
 # doesn't seem to like separate, join all together
-#Mods_In_Order <- c("Hier. Asym. Normal, Neg. Binomial", "Hier. Normal, Neg. Binomial")
+Mods_In_Order <- c("Hierarchical Asymmetric Normal", "Hierarchical Normal")
 
 # Plots curves on toNorm_Hparams$rt_m_m + minDay-1p
 # grab global curve params from Anorm_Params and Norm_Params - or draws from posterior?
@@ -333,22 +366,22 @@ ANorm_Params <- Summary_Hier_NB_ANorm$Date_Dists_Ints %>% filter(Year == 1983)
 NormDist <- data.frame(
     x = seq(220, 350, by = 0.1),
     y = dnorm(seq(220, 350, by = 0.1), mean = Norm_Params$rt_m_m+ minDay-1,  sd = Norm_Params$rt_sd_m),
-    Model = "Hier. Normal, Neg. Binomial",
+    Model = "Hierarchical Normal",
     Model_french = "Normale hiér., binomiale nég."
 )
 ANormDist <- data.frame(
   x = seq(220, 350, by = 0.1),
   y = ddnorm(seq(220, 350, by = 0.1), mean = unique(ANorm_Params$rt_m_m) + minDay-1, sigma = as.numeric(ANorm_Params$rt_sd)),
-  Model = "Hier. Asym. Normal, Neg. Binomial",
+  Model = "Hierarchical Asymmetric Normal",
   Model_french = "Normale asym. hiér., binomiale nég."
 )
 
 #Change model names for plotting
 Global_Winds_Plot <- Global_Winds %>%
-                 mutate(Model = fct_recode(as.factor(Model),
-                            "Indep. Normal, Poisson" = "Indep_Poisson",
-                            "Hier. Normal, Neg. Binomial" = "Hier_NB_HQ",
-                            "Hier. Asym. Normal, Neg. Binomial" = "Hier_NB_ANorm"))
+  mutate(Model = fct_recode(as.factor(Model),
+                            "Independent Normal" = "Indep_Poisson",
+                            "Hierarchical Normal" = "Hier_NB_HQ",
+                            "Hierarchical Asymmetric Normal" = "Hier_NB_ANorm"))
 
 # Subset for diff wins
 Dists <- rbind(NormDist, ANormDist) %>%
@@ -403,6 +436,7 @@ p2_french
 #Montaison moyenne, périodes de 95 %, 90 %, et 80 %
 
 
+
 #Get run timing curves for the independent poisson model
 IndepParams <- Summary_Indep_Poisson$Date_Dists_Ints
 IndepNormDist <- list()
@@ -435,7 +469,7 @@ p3 <- ggplot(IndepNormDist) +
         axis.ticks.y = element_blank())+
   annotate("rect", xmin = 220, xmax = 350, ymin = 0.047, ymax = 0.052,
            color="black", fill = "#D9D9D9")+ 
-  annotate(label = "Indep. Normal, Poisson", x= 283, y=0.0495, geom="text", size = 3)
+  annotate(label = "Independent Normal", x= 283, y=0.0495, geom="text", size = 3)
 #ggsave(file= "Outputs/3_Plots/indep_poisson.png")
 p3
 
@@ -620,15 +654,15 @@ ggsave(filename = "Outputs/3_Plots/Catch_multipanel_french.png", height = 8, wid
 #===========================================
 #Plot residuals 
 pdf(file= "Outputs/3_Plots/Residuals_Hier_NB_ANorm.pdf", width = 8.5, height = 4)
-plot(Summary_Hier_NB_ANorm$sims, title = "DHARMa residual diagnostics: Hier. Asym. Normal")
+plot(Summary_Hier_NB_ANorm$sims, title = "DHARMa residual diagnostics: Hierarchical Asymmetric Normal")
 dev.off()
 
 pdf(file= "Outputs/3_Plots/Residuals_Hier_NB_HQ.pdf", width = 8.5, height = 4)
-plot(Summary_Hier_NB_HQ$sims, title = "DHARMa residual diagnostics: Hier. Normal")
+plot(Summary_Hier_NB_HQ$sims, title = "DHARMa residual diagnostics: Hierarchical Normal")
 dev.off()
 
 pdf(file= "Outputs/3_Plots/Residuals_Indep_Poisson.pdf", width = 8.5, height = 4)
-plot(Summary_Indep_Poisson$sims, title = "DHARMa residual diagnostics: Indep. Poisson")
+plot(Summary_Indep_Poisson$sims, title = "DHARMa residual diagnostics: Independent Normal")
 dev.off()
 
 #These plots don't seem to work with the multipanelling packages, so need to paste them together manually
@@ -639,3 +673,136 @@ dev.off()
 write.csv(Summary_Hier_NB_ANorm$Date_Dists_Ints, "Outputs/2_DataOut/ANorm_Date_Dists.csv")
 write.csv(Summary_Hier_NB_HQ$Date_Dists_Ints, "Outputs/2_DataOut/Norm_Date_Dists.csv")
 write.csv(Summary_Indep_Poisson$Date_Dists_Ints, "Outputs/2_DataOut/Indep_Poisson_Dists.csv")
+
+#=========================================
+#Additional plots 
+
+#Read in spawner data from Thompson and Chilcotin
+spawners <- read.csv("Data/Spawners from RBison 230630.csv")
+
+#Subset to 1983 -
+spawners$BroodYear <- as.numeric(spawners$BroodYear)
+spawners <- spawners[spawners$BroodYear >= 1983,]
+spawners <- spawners[,-c(4,5)]
+spawners$Thompson <- as.numeric(spawners$Thompson)
+spawners$Chilcotin <- as.numeric(spawners$Chilcotin)
+spawners$Total <- spawners$Thompson + spawners$Chilcotin
+spawners$prop_chilcotin <- spawners$Chilcotin/spawners$Total
+
+spawners_bar <- data.frame("BroodYear" = rep(spawners$BroodYear, 2),
+              "Stock" = c(rep("Thompson", nrow(spawners)), rep("Chilcotin", nrow(spawners))),
+              "Count" = c(spawners$Thompson, spawners$Chilcotin))
+
+
+spawners1 <- ggplot(spawners_bar)+
+  geom_bar(aes(x=BroodYear, y = Count, fill = Stock), position = "fill", stat = "identity")+
+  theme_bw()+
+  ylab("Proportion")+
+  scale_fill_manual(values = c("deepskyblue4", "darkorange1"))
+spawners1
+
+spawners2 <- ggplot(spawners)+
+  geom_point(aes(x=BroodYear, y = Thompson), color = "deepskyblue4")+
+  geom_line(aes(x=BroodYear, y = Thompson), color = "deepskyblue4")+
+  geom_point(aes(x=BroodYear, y = Chilcotin, color = "darkorange1"))+
+  geom_line(aes(x=BroodYear, y = Chilcotin, color = "darkorange1"))+
+  theme_bw()+
+  ylab("Count")+
+  theme(plot.margin = unit(c(0,3.35,0.25,0.25), "cm"), legend.position = "none")
+spawners2
+
+plot_grid(spawners1, spawners2, nrow = 2)
+ggsave(file = "Outputs/3_Plots/Thompson_Chilcotin_spawners.png", width = 8, height = 7, units = "in")
+
+#Plot catchability values 
+q_ests_Hier_NB_ANorm <- Summary_Hier_NB_ANorm$Pred_Catch_Ints %>% 
+  group_by(Fishery, Year) %>% 
+  summarise(q=mean(q), q.lower=mean(q.lower), q.upper=mean(q.upper)) %>% 
+  mutate(Model = "Hierarchical Asymmetric Normal")
+
+#Read in the object with q_mean
+q_mean <- readRDS("Outputs/1_ModelRuns/Q_Summary_Hier_NB_Anorm.RDS")
+qmedchin <- median(InvLogit(q_mean$q_mean[q_mean$Fishery == "1"]))
+qmedchum <- median(InvLogit(q_mean$q_mean[q_mean$Fishery == "2"]))
+
+q <- ggplot()+
+  geom_point(data = q_ests_Hier_NB_ANorm, aes(x=q, y = Year, color = Fishery), size = 2.5, alpha = 0.6)+
+  geom_segment(data = q_ests_Hier_NB_ANorm, aes(x= q.lower, xend = q.upper, y = Year, yend = Year, color = Fishery), linewidth = 1.2, alpha = 0.6)+
+  geom_vline(xintercept = qmedchin, color = "#00BFC4")+
+  geom_vline(xintercept = qmedchum, color = "#F8766D")+
+  theme_bw()+
+  theme(plot.title = element_text(size=10))+
+  xlab("Catchability (q)")+
+  ggtitle("Hierarchical Asymmetric Normal")+
+  scale_color_discrete(labels = c("Chum Test", "Chinook Test"))
+q
+ggsave(file = "Outputs/3_Plots/Catchability_Hier_Asym.png", width = 5, height = 4)
+
+# q_ests_Hier_NB_HQ <- Summary_Hier_NB_HQ$Pred_Catch_Ints %>% 
+#   group_by(Fishery, Year) %>% 
+#   summarise(q=mean(q), q.lower=mean(q.lower), q.upper=mean(q.upper)) %>%
+#   mutate(Model = "Hierarchical Normal")
+# 
+# q_ests_Indep_Poisson <- Summary_Indep_Poisson$Pred_Catch_Ints %>% 
+#   group_by(Fishery, Year) %>% 
+#   summarise(q=mean(q), q.lower=mean(q.lower), q.upper=mean(q.upper)) %>%
+#   mutate(Model = "Independent Normal")
+
+# q_all <- bind_rows(q_ests_Hier_NB_ANorm, q_ests_Hier_NB_HQ, q_ests_Indep_Poisson)
+# 
+# ggplot(q_all)+
+#   geom_point(aes(x=q, y = Year, color = Fishery), size = 1.5, alpha = 0.6)+
+#   geom_segment(aes(x= q.lower, xend = q.upper, y = Year, yend = Year, color = Fishery), linewidth = 0.75, alpha = 0.6)+
+#   theme_bw()+
+#   theme(plot.title = element_text(size=10))+
+#   xlab("Catchability (q)")+
+#   facet_wrap(~Model, ncol = 1)+
+#   scale_color_discrete(labels = c("Chum Test", "Chinook Test"))
+# ggsave(file = "Outputs/3_Plots/Catchability.png", width = 5, height = 7.5) 
+# 
+#   
+
+
+# 
+# q1 <- ggplot()+
+#   geom_point(data = q_ests_Indep_Poisson, aes(x=q, y = Year, color = Fishery), size = 2.5, alpha = 0.6)+
+#   geom_segment(data = q_ests_Indep_Poisson, aes(x= q.lower, xend = q.upper, y = Year, yend = Year, color = Fishery), linewidth = 1.2, alpha = 0.6)+
+#   theme_bw()+
+#   theme(legend.position = "none", plot.title = element_text(size=10))+
+#   xlab("")+
+#   ggtitle("Independent Normal")
+# q1  
+# 
+# 
+# q2 <- ggplot()+
+#   geom_point(data = q_ests_Hier_NB_HQ, aes(x=q, y = Year, color = Fishery), size = 2.5, alpha = 0.6)+
+#   geom_segment(data = q_ests_Hier_NB_HQ, aes(x= q.lower, xend = q.upper, y = Year, yend = Year, color = Fishery), linewidth = 1.2, alpha = 0.6)+
+#   theme_bw()+
+#   theme(legend.position = "none", axis.title.y = element_blank(), plot.title = element_text(size=10))+
+#   xlab("Catchability")+
+#   ggtitle("Hierarchical Normal")
+# q2
+
+q3 <- ggplot()+
+  geom_point(data = q_ests_Hier_NB_ANorm, aes(x=q, y = Year, color = Fishery), size = 2.5, alpha = 0.6)+
+  geom_segment(data = q_ests_Hier_NB_ANorm, aes(x= q.lower, xend = q.upper, y = Year, yend = Year, color = Fishery), linewidth = 1.2, alpha = 0.6)+
+  theme_bw()+
+  theme(axis.title.y = element_blank(), plot.title = element_text(size=10))+
+  xlab("")+
+  ggtitle("Hierarchical Asymmetric Normal")+
+  scale_color_discrete(labels = c("Chum Test", "Chinook Test"))
+q3
+
+plot_grid(q1, q2, q3, ncol = 3, rel_widths = c(1,1,1.4))
+ggsave(file = "Outputs/3_Plots/Catchability.png", width = 10, height = 6) 
+
+#Make vertical 
+plot_grid(q1, q2, q3, ncol = 1, align = "v", axis = "b")
+ggsave(file = "Outputs/3_Plots/Catchability_vert.png", width = 3, height = 10) 
+
+
+# ggplot()+
+#   geom_point(data = q_ests_Hier_NB_ANorm, aes(x=Year, y = q, color = Fishery), size = 2.5, alpha = 0.7, )+
+#   geom_segment(data = q_ests_Hier_NB_ANorm, aes(y= q.lower, yend = q.upper, x = Year, xend = Year, color = Fishery), linewidth = 1.2, alpha = 0.7, position = position_dodge(width = 2))+
+#   theme_bw()+
+#   xlab("Catchability")

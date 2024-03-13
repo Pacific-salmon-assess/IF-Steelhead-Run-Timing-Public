@@ -67,6 +67,8 @@ fc <- sf::st_read("C:\\Users\\POTAPOVAA\\Documents\\fwa_network_fraser_historic.
 #Subset to stream order > 5 for mapping 
 fc <- fc[fc$STREAM_ORDER > 5,]
 
+#Set the bounding box for main map and inset here
+bbox <-c(x1 = 1152862, x2 = 1421635, y1 = 467000, y2 = 780000)
 
 #Create map 
 map <- ggplot(data = bc)+
@@ -77,51 +79,41 @@ map <- ggplot(data = bc)+
   geom_sf(data = points_geo, color = "black")+
   #geom_sf_text(data = points_geo, aes(label = name))+
   theme_bw()+
-  xlim(c(1152862,1421635))+
-  ylim(c(454543,796090))+
+  xlim(c(bbox["x1"],bbox["x2"]))+
+  ylim(c(bbox["y1"],bbox["y2"]))+
   xlab("Longitude")+
   ylab("Latitude")
-
 map
-# Add french labels: 
-# makeLong <- function(x) paste0(-x, "\u00b0O")
-# 
-# map + scale_x_continuous(labels = makeLong)
-# 
-# map <- ggplot(data = bc)+
-#   #geom_sf()+
-#   geom_sf(data = us_can)+
-#   geom_sf(data = fr)+
-#   geom_sf(data = fc)+
-#   geom_sf(data = points_geo, color = "black")+
-#   scale_x_continuous(labels = makeLong)+
-#   #geom_sf_text(data = points_geo, aes(label = name))+
-#   xlim(c(1152862,1421635))+
-#   ylim(c(454543,796090))+
-#   theme_bw()+
-#   xlab("Longitude")+
-#   ylab("Latitude")
-# 
-# map
+ggsave(file = "Outputs/3_Plots/Map_noinset.png", height = 8, width = 6, units = "in")
 
+
+#Vancouver island
+van <- ggplot(data = bc)+
+  #geom_sf()+
+  geom_sf(data = us_can)+
+  geom_sf(data = fr)+
+  geom_sf(data = fc)+
+  #geom_sf_text(data = points_geo, aes(label = name))+
+  theme_bw()+
+  xlim(c(835000,1210000))+
+  ylim(c(354543,690000))+
+  theme(plot.margin = margin(0, 0, 0, 0, "cm"))
+van
+ggsave(file = "Outputs/3_Plots/Map_van.png", height = 3, width = 3, units = "in")
 
 #Create inset of province with box
+#Need a box for vancouver island as well - can't quite get it right because of axis limits so just draw it manually
 inset <- ggplot(data = bc)+
   geom_sf(data = us_can)+
   geom_sf(data = bc)+
   geom_sf(data = fr)+
-  geom_rect(aes(xmin = 1152862, xmax = 1421635, ymin = 454543, ymax = 796090), color = "red", fill = NA) +
+  geom_rect(aes(xmin = bbox["x1"], xmax = bbox["x2"], ymin = bbox["y1"], ymax = bbox["y2"]), color = "black", fill = NA) +
   theme_bw()+
   ylim(391459,1677475)+
   xlim(449589,1836761)+
   theme(axis.text = element_blank(), axis.ticks.length = unit(0, "pt"), axis.ticks = element_blank(),plot.margin = margin(0, 0, 0, 0, "cm"))
 inset
-
-#Plot the two together with cowplot draw_plot
-ggdraw()+
-  draw_plot(map)+
-  draw_plot(inset, x = 0.686, y = 0.682, width = 0.3, height = 0.3)
-#Save
-ggsave(file = "Outputs/3_Plots/Map_nolabels_norivers.png", height = 8, width = 6, units = "in")
+ggsave(file = "Outputs/3_Plots/Map_inset.png", height = 3, width = 3, units = "in")
 
 #Manually add labels for the rivers in inkscape
+
