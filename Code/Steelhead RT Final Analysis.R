@@ -260,7 +260,7 @@ p0 <- ggplot(All_Windows) +
   geom_vline(xintercept=ANorm_025, linetype="dashed", color = "red")+
   geom_vline(xintercept=ANorm_975, linetype="dashed", color = "red")+
   geom_point(data = outs, aes(y=Year, x=Day, size=Catch), col="blue", alpha=0.5) +
-  facet_wrap(~Model, ncol=1)  +
+  facet_wrap(~factor(Model, levels = c('Independent Normal', 'Hierarchical Normal', 'Hierarchical Asymmetric Normal')), ncol=1)  +
   xlab("Date")+
   theme_bw()+
   theme(legend.position = c(.9,.88), 
@@ -272,24 +272,8 @@ p0 <- ggplot(All_Windows) +
 p0
 #ggsave("Outputs/3_Plots/Window_comparison_All.png", width = 8, height = 11, units = "in")
 
-#Remove red dashed lines from this plot
-p0_nolines <- ggplot(All_Windows) +
-  geom_rect(aes(ymin=min(Year), ymax=max(Year), 
-                xmin = hD_025, xmax=hD_975), fill='grey', alpha=0.1) +
-  geom_point(aes(y=Year, x=D_50), size = 0.5) +
-  geom_segment(aes(y=Year, x=D_025, xend=D_975, yend=Year), size = 0.25) +
-  geom_point(data = outs, aes(y=Year, x=Day, size=Catch), col="blue", alpha=0.5) +
-  facet_wrap(~Model, ncol=1)+
-  xlab("Date")+
-  theme_bw()+
-  theme(legend.position = c(.9,.88), 
-        legend.background = element_blank())+
-  scale_x_continuous(breaks=c(214, 244, 274, 305, 335),
-                     labels=c("Aug 1", "Sept 1", "Oct 1", "Nov 1", "Dec 1")) +
-  ggtitle("95% Migration Window")
-p0_nolines
 
-#Create a single panel plot for the asym model only
+#Create a single panel plot for the asym model only for the SAR
 p0_asym <- ggplot(All_Windows[All_Windows$Model == "Hierarchical Asymmetric Normal",]) +
   geom_rect(aes(ymin=min(Year), ymax=max(Year), 
                 xmin = hD_025, xmax=hD_975), fill='grey', alpha=0.1) +
@@ -304,15 +288,19 @@ p0_asym <- ggplot(All_Windows[All_Windows$Model == "Hierarchical Asymmetric Norm
 p0_asym
 ggsave("Outputs/3_Plots/Run_Timing_asym.png", width = 5, height = 3, units = "in")
 
+
 #names in french
 #Normale asym. hiér., binomiale nég.
 #Normale hiér., binomiale nég.
 #Normale indép., poisson
 
-All_Windows$Model_french <- recode_factor(All_Windows$Model, "Hier. Asym. Normal, Neg. Binomial" = "Normale asym. hiér., binomiale nég.",
-                                       "Hier. Normal, Neg. Binomial" = "Normale hiér., binomiale nég.",
-                                       "Indep. Normal, Poisson" = "Normale indép., poisson")
+All_Windows$Model_french <- recode_factor(All_Windows$Model, "Hierarchical Asymmetric Normal" = "Normale asymmétrique hiérarchique",
+                                       "Hierarchical Normal" = "Normale hiérarchique",
+                                       "Independent Normal" = "Normale indépendente")
 
+outs$Model_french <- recode_factor(outs$Model, "Hierarchical Asymmetric Normal" = "Normale asymmétrique hiérarchique",
+                                  "Hierarchical Normal" = "Normale hiérarchique",
+                                  "Independent Normal" = "Normale indépendente")
 
 p0_french <- ggplot(All_Windows) +
   geom_rect(aes(ymin=min(Year), ymax=max(Year), 
@@ -323,7 +311,7 @@ p0_french <- ggplot(All_Windows) +
   geom_vline(xintercept=ANorm_025, linetype="dashed", color = "red")+
   geom_vline(xintercept=ANorm_975, linetype="dashed", color = "red")+
   geom_point(data = outs, aes(y=Year, x=Day, size=Catch), col="blue", alpha=0.5) +
-  facet_wrap(~Model_french, ncol=1)  +
+  facet_wrap(~factor(Model_french, levels = c("Normale indépendente", "Normale hiérarchique", "Normale asymmétrique hiérarchique")), ncol=1)  +
   xlab("Date")+
   ylab("Année")+
   labs(size  = "Prise")+
@@ -336,6 +324,24 @@ p0_french <- ggplot(All_Windows) +
 
 #periode de 95% de la migration?
 p0_french
+
+#Plot just the asymmetric in french
+p0_asym_french <- ggplot(All_Windows[All_Windows$Model == "Hierarchical Asymmetric Normal",]) +
+  geom_rect(aes(ymin=min(Year), ymax=max(Year), 
+                xmin = hD_025, xmax=hD_975), fill='grey', alpha=0.1) +
+  geom_point(aes(y=Year, x=D_50), size = 0.5) +
+  geom_segment(aes(y=Year, x=D_025, xend=D_975, yend=Year), size = 0.25) +
+  geom_point(data = outs[outs$Model == "Hierarchical Asymmetric Normal",], aes(y=Year, x=Day, size=Catch), col="blue", alpha=0.5) +
+  xlab("Date")+
+  ylab("Année")+
+  labs(size  = "Prise")+
+  theme_bw()+
+  scale_x_reverse(breaks=c(214, 244, 274, 305, 335),
+                  labels=c("1 août", "1 sept", "1 oct", "1 nov", "1 déc")) +
+  coord_flip()
+p0_asym_french
+ggsave("Outputs/3_Plots/Run_Timing_asym_french.png", width = 5, height = 3, units = "in")
+
 
 #Calculate proportion of catch outside window
 Yearly_Catch <- Catch %>% group_by(Year) %>% summarise(Yearly_Catch = sum(SH_Catch))
@@ -367,13 +373,13 @@ NormDist <- data.frame(
     x = seq(220, 350, by = 0.1),
     y = dnorm(seq(220, 350, by = 0.1), mean = Norm_Params$rt_m_m+ minDay-1,  sd = Norm_Params$rt_sd_m),
     Model = "Hierarchical Normal",
-    Model_french = "Normale hiér., binomiale nég."
+    Model_french = "Normale hiérarchique"
 )
 ANormDist <- data.frame(
   x = seq(220, 350, by = 0.1),
   y = ddnorm(seq(220, 350, by = 0.1), mean = unique(ANorm_Params$rt_m_m) + minDay-1, sigma = as.numeric(ANorm_Params$rt_sd)),
   Model = "Hierarchical Asymmetric Normal",
-  Model_french = "Normale asym. hiér., binomiale nég."
+  Model_french = "Normale asymmétrique hiérarchique"
 )
 
 #Change model names for plotting
@@ -390,52 +396,96 @@ Dists <- rbind(NormDist, ANormDist) %>%
   mutate(Win90 = y*ifelse(x > hD_05 & x < hD_95, 1, 0)) %>%
   mutate(Win80 = y*ifelse(x > hD_10 & x < hD_90, 1, 0))
 
-#Plot the global windows for the two hierarchical models 
+#Plot the global windows for the two hierarchical models
 p2 <- ggplot(data = Dists) +
-       geom_polygon(aes(x = x, y = Win95), fill = "black", alpha=0.2) +
-       geom_polygon(aes(x = x, y = Win90), fill = "black", alpha=0.3) +
-       geom_polygon(aes(x = x, y = Win80), fill = "black", alpha=0.4) +
-       geom_line(aes(x,y)) +
-       facet_wrap(~Model, ncol=1)+
-       scale_x_continuous(breaks=c(244, 274, 305, 335),expand = c(0,0))+
-       scale_y_continuous(breaks=c(0),
+  geom_polygon(aes(x = x, y = Win95), fill = "black", alpha=0.2) +
+  geom_polygon(aes(x = x, y = Win90), fill = "black", alpha=0.3) +
+  geom_polygon(aes(x = x, y = Win80), fill = "black", alpha=0.4) +
+  geom_line(aes(x,y)) +
+  facet_wrap(~factor(Model, levels = c('Hierarchical Normal', 'Hierarchical Asymmetric Normal')), ncol=1)+
+  scale_x_continuous(breaks=c(244, 274, 305, 335),expand = c(0,0))+
+  scale_y_continuous(breaks=c(0),
                      labels=c(""))+
-       ggtitle("Average Run-Timing with 95%, 90%, and 80% Windows") +
-       theme(plot.title = element_text(hjust = 1))+
-       theme_bw()+
-       theme(plot.margin=unit(c(2.1,1.9,4.5,5), "mm"),
-             axis.text = element_blank(), 
-             axis.ticks = element_blank(),
-             axis.title = element_blank())  
-       #scale_fill_identity(name = 'Window', guide = 'legend',labels = c("80%", "90%", "95%"))
-                           
-         #guides(color = guide_legend(order = 1, override.aes = list(shape = c(16, 16, NA), 
-                           #  linetype = c("blank", "solid", "solid"))))
+  #ggtitle("Average Run-Timing with 95%, 90%, and 80% Windows") +
+  theme(plot.title = element_text(hjust = 1))+
+  xlab("Date") +
+  theme_bw()+
+  theme(plot.margin=unit(c(2.5,1.9,1.7,5), "mm"),
+        axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())  
 p2
 
 
+#French translation
 p2_french <- ggplot(data = Dists) +
   geom_polygon(aes(x = x, y = Win95), fill = "black", alpha=0.2) +
   geom_polygon(aes(x = x, y = Win90), fill = "black", alpha=0.3) +
   geom_polygon(aes(x = x, y = Win80), fill = "black", alpha=0.4) +
   geom_line(aes(x,y)) +
-  facet_wrap(~Model_french, ncol=1)+
+  facet_wrap(~factor(Model_french, levels = c("Normale hiérarchique", "Normale asymmétrique hiérarchique")), ncol=1)+
   scale_x_continuous(breaks=c(244, 274, 305, 335),expand = c(0,0))+
   scale_y_continuous(breaks=c(0),
                      labels=c(""))+
-  ggtitle("Montaison moyenne, périodes de 95 %, 90 %, et 80 %") +
+  #ggtitle("Average Run-Timing with 95%, 90%, and 80% Windows") +
   theme(plot.title = element_text(hjust = 1))+
+  xlab("Date") +
   theme_bw()+
-  theme(plot.margin=unit(c(2.1,1.9,4.5,5), "mm"),
-        axis.text = element_blank(), 
-        axis.ticks = element_blank(),
-        axis.title = element_blank())
-
+  theme(plot.margin=unit(c(2.5,1.9,1.7,5), "mm"),
+        axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())  
 p2_french
 
 #Montaison moyenne, périodes de 95 %, 90 %, et 80 %
 
 
+#Need to extend the dates for the plots 
+ANormDist_extended <- data.frame(
+  x = seq(213, 350, by = 0.1),
+  y = ddnorm(seq(213, 350, by = 0.1), mean = unique(ANorm_Params$rt_m_m) + minDay-1, sigma = as.numeric(ANorm_Params$rt_sd)),
+  Model = "Hierarchical Asymmetric Normal"
+)
+
+ANormDist_extended <- ANormDist_extended %>%
+  left_join(Global_Winds_Plot, join_by(Model), relationship = "many-to-many") %>%
+  mutate(Win95 = y*ifelse(x > hD_025 & x < hD_975, 1, 0)) %>%
+  mutate(Win90 = y*ifelse(x > hD_05 & x < hD_95, 1, 0)) %>%
+  mutate(Win80 = y*ifelse(x > hD_10 & x < hD_90, 1, 0))
+
+#Create a version of the above plot that only has the top panel for the Asym
+p2_asym <- ggplot(data = ANormDist_extended) +
+  geom_polygon(aes(x = x, y = Win95), fill = "black", alpha=0.2) +
+  geom_polygon(aes(x = x, y = Win90), fill = "black", alpha=0.3) +
+  geom_polygon(aes(x = x, y = Win80), fill = "black", alpha=0.4) +
+  geom_line(aes(x,y)) +
+  scale_x_continuous(breaks=c(213,244, 274, 305, 335),
+                     labels=c("1 août", "1 sept", "1 oct", "1 nov", "1 déc"), limits = c(213,335))+
+  #scale_y_continuous(breaks=c(0),labels=c(""))+
+  theme(plot.title = element_text(hjust = 1))+
+  xlab("Date")+
+  ylab("Density")+
+  theme_bw()+
+  theme(plot.margin=unit(c(2.1,1.9,4.5,1.5), "mm"))
+
+p2_asym
+
+#Create a version of the above plot that only has the top panel for the Asym
+p2_asym_french <- ggplot(data = ANormDist_extended) +
+  geom_polygon(aes(x = x, y = Win95), fill = "black", alpha=0.2) +
+  geom_polygon(aes(x = x, y = Win90), fill = "black", alpha=0.3) +
+  geom_polygon(aes(x = x, y = Win80), fill = "black", alpha=0.4) +
+  geom_line(aes(x,y)) +
+  scale_x_continuous(breaks=c(213,244, 274, 305, 335),
+                     labels=c("Aug 1", "Sept 1", "Oct 1", "Nov 1", "Dec 1"), limits = c(213,335))+
+  #scale_y_continuous(breaks=c(0),labels=c(""))+
+  theme(plot.title = element_text(hjust = 1))+
+  xlab("Date")+
+  ylab("Densité")+
+  theme_bw()+
+  theme(plot.margin=unit(c(2.1,1.9,4.5,1.5), "mm"))
+
+p2_asym_french
 
 #Get run timing curves for the independent poisson model
 IndepParams <- Summary_Indep_Poisson$Date_Dists_Ints
@@ -459,43 +509,42 @@ p3 <- ggplot(IndepNormDist) +
   geom_segment(data = Indep_Mean_Window, aes(x = hD_025, y = -0.002 , yend = -0.002, xend = hD_975), alpha = 0.2, linewidth = 2)+
   geom_segment(data = Indep_Mean_Window, aes(x = hD_05, y = -0.002 , yend = -0.002, xend = hD_95), alpha = 0.3, linewidth = 2)+
   geom_segment(data = Indep_Mean_Window, aes(x = hD_10, y = -0.002 , yend = -0.002, xend = hD_90), alpha = 0.4, linewidth = 2)+
-  scale_x_continuous(breaks=c( 244, 274, 305, 335),
-                     labels=c("Sept 1", "Oct 1", "Nov 1", "Dec 1"),
-                     limits=c(220,350), expand = c(0,0))+
+  scale_x_continuous(limits=c(220,350), expand = c(0,0))+
   scale_y_continuous(breaks=c(0),labels=c(""), limits = c(-0.0035, 0.052), expand = c(NA, 0))+
-  xlab("Date")+
+  #xlab("Date")+
+  ylab("")+
+  ggtitle("Average Run-Timing with 95%, 90%, and 80% Windows") +
   theme_bw()+
-  theme(plot.margin=unit(c(-3.5,1.9,2,4.2), "mm"), axis.title.y = element_blank(),
-        axis.ticks.y = element_blank())+
+  theme(plot.margin=unit(c(2,1.9,-1,4.2), "mm"), axis.title = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), axis.text.x = element_blank())+
   annotate("rect", xmin = 220, xmax = 350, ymin = 0.047, ymax = 0.052,
            color="black", fill = "#D9D9D9")+ 
   annotate(label = "Independent Normal", x= 283, y=0.0495, geom="text", size = 3)
-#ggsave(file= "Outputs/3_Plots/indep_poisson.png")
 p3
-
+#ggsave(file= "Outputs/3_Plots/indep_poisson.png")
 
 p3_french <- ggplot(IndepNormDist) +
   geom_line(aes(x,y, group = Year), alpha = 0.5)+
   geom_segment(data = Indep_Mean_Window, aes(x = hD_025, y = -0.002 , yend = -0.002, xend = hD_975), alpha = 0.2, linewidth = 2)+
   geom_segment(data = Indep_Mean_Window, aes(x = hD_05, y = -0.002 , yend = -0.002, xend = hD_95), alpha = 0.3, linewidth = 2)+
   geom_segment(data = Indep_Mean_Window, aes(x = hD_10, y = -0.002 , yend = -0.002, xend = hD_90), alpha = 0.4, linewidth = 2)+
-  scale_x_continuous(breaks=c( 244, 274, 305, 335),
-                     labels=c("1 sept", "1 oct", "1 nov", "1 déc"),
-                     limits=c(220,350), expand = c(0,0))+
+  scale_x_continuous(limits=c(220,350), expand = c(0,0))+
   scale_y_continuous(breaks=c(0),labels=c(""), limits = c(-0.0035, 0.052), expand = c(NA, 0))+
-  xlab("Date")+ 
+  #xlab("Date")+
+  ylab("")+
+  ggtitle("Montaison moyenne, périodes de 95 %, 90 %, et 80 %") +
   theme_bw()+
-  theme(plot.margin=unit(c(-3.5,1.9,2,4.2), "mm"), axis.title.y = element_blank(),
-        axis.ticks.y = element_blank())+
+  theme(plot.margin=unit(c(2,1.9,-1,4.2), "mm"), axis.title = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), axis.text.x = element_blank())+
   annotate("rect", xmin = 220, xmax = 350, ymin = 0.047, ymax = 0.052,
            color="black", fill = "#D9D9D9")+ 
-  annotate(label = "Normale indép., poisson", x= 283, y=0.0495, geom="text", size = 3)
-#ggsave(file= "Outputs/3_Plots/indep_poisson.png")
+  annotate(label = "Normale indépendente", x= 283, y=0.0495, geom="text", size = 3)
 p3_french
 
+
 #Create 6-panel comparison plot with p1, p2, p3
-p4 <- grid.arrange(p2, p3, ncol = 1, heights = c(2,1))
-p4_french <- grid.arrange(p2_french, p3_french, ncol = 1, heights = c(2,1))
+p4 <- grid.arrange(p3, p2, ncol = 1, heights = c(1,2))
+p4_french <- grid.arrange(p3_french, p2_french, ncol = 1, heights = c(1,2))
 
 png("Outputs/3_Plots/Run_Timing_6panel_labelled.png", width = 10, height = 9, units = "in", res = 300)
 plot_grid(p0,p4,ncol = 2, labels = c('A', 'B'))
@@ -651,6 +700,16 @@ ggsave(filename = "Outputs/3_Plots/Catch_multipanel.png", height = 8, width = 5.
 plot_grid(a_french,b_french,c_french,ncol = 1, rel_heights = c(2,2,1), labels = "AUTO")
 ggsave(filename = "Outputs/3_Plots/Catch_multipanel_french.png", height = 8, width = 5.5, units = "in")
 
+#Create a figure for the SAR that combines catch and run timing curve panels
+plot_grid(c, b, p2_asym, ncol = 1, rel_heights = c(1.3,2.5,2), labels = "AUTO")
+ggsave(filename = "Outputs/3_Plots/Catch_Run_Timing_multipanel.png", height = 8, width = 5.5, units = "in")
+
+plot_grid(c_french, b_french, p2_asym_french, ncol = 1, rel_heights = c(1.3,2.5,2), labels = "AUTO")
+ggsave(filename = "Outputs/3_Plots/Catch_Run_Timing_multipanel_french.png", height = 8, width = 5.5, units = "in")
+
+
+
+
 #===========================================
 #Plot residuals 
 pdf(file= "Outputs/3_Plots/Residuals_Hier_NB_ANorm.pdf", width = 8.5, height = 4)
@@ -738,6 +797,24 @@ q <- ggplot()+
 q
 ggsave(file = "Outputs/3_Plots/Catchability_Hier_Asym.png", width = 5, height = 4)
 
+#Catchability in french
+q_french <- ggplot()+
+  geom_point(data = q_ests_Hier_NB_ANorm, aes(x=q, y = Year, color = Fishery), size = 2.5, alpha = 0.6)+
+  geom_segment(data = q_ests_Hier_NB_ANorm, aes(x= q.lower, xend = q.upper, y = Year, yend = Year, color = Fishery), linewidth = 1.2, alpha = 0.6)+
+  geom_vline(xintercept = qmedchin, color = "#00BFC4")+
+  geom_vline(xintercept = qmedchum, color = "#F8766D")+
+  theme_bw()+
+  theme(plot.title = element_text(size=10))+
+  xlab("Capturabilité (q)")+
+  ylab("Année")+
+  labs(color = "Pêche d'essai")+
+  ggtitle("Normale asymmétrique hiérarchique")+
+  scale_color_discrete(labels = c("Saumon kéta", "Saumon quinnat"))
+q_french
+ggsave(file = "Outputs/3_Plots/Catchability_Hier_Asym_french.png", width = 5, height = 4)
+
+#Plotting catchability for all the other models 
+
 # q_ests_Hier_NB_HQ <- Summary_Hier_NB_HQ$Pred_Catch_Ints %>% 
 #   group_by(Fishery, Year) %>% 
 #   summarise(q=mean(q), q.lower=mean(q.lower), q.upper=mean(q.upper)) %>%
@@ -783,18 +860,18 @@ ggsave(file = "Outputs/3_Plots/Catchability_Hier_Asym.png", width = 5, height = 
 #   ggtitle("Hierarchical Normal")
 # q2
 
-q3 <- ggplot()+
-  geom_point(data = q_ests_Hier_NB_ANorm, aes(x=q, y = Year, color = Fishery), size = 2.5, alpha = 0.6)+
-  geom_segment(data = q_ests_Hier_NB_ANorm, aes(x= q.lower, xend = q.upper, y = Year, yend = Year, color = Fishery), linewidth = 1.2, alpha = 0.6)+
-  theme_bw()+
-  theme(axis.title.y = element_blank(), plot.title = element_text(size=10))+
-  xlab("")+
-  ggtitle("Hierarchical Asymmetric Normal")+
-  scale_color_discrete(labels = c("Chum Test", "Chinook Test"))
-q3
+# q3 <- ggplot()+
+#   geom_point(data = q_ests_Hier_NB_ANorm, aes(x=q, y = Year, color = Fishery), size = 2.5, alpha = 0.6)+
+#   geom_segment(data = q_ests_Hier_NB_ANorm, aes(x= q.lower, xend = q.upper, y = Year, yend = Year, color = Fishery), linewidth = 1.2, alpha = 0.6)+
+#   theme_bw()+
+#   theme(axis.title.y = element_blank(), plot.title = element_text(size=10))+
+#   xlab("")+
+#   ggtitle("Hierarchical Asymmetric Normal")+
+#   scale_color_discrete(labels = c("Chum Test", "Chinook Test"))
+# q3
 
-plot_grid(q1, q2, q3, ncol = 3, rel_widths = c(1,1,1.4))
-ggsave(file = "Outputs/3_Plots/Catchability.png", width = 10, height = 6) 
+# plot_grid(q1, q2, q3, ncol = 3, rel_widths = c(1,1,1.4))
+# ggsave(file = "Outputs/3_Plots/Catchability.png", width = 10, height = 6) 
 
 #Make vertical 
 plot_grid(q1, q2, q3, ncol = 1, align = "v", axis = "b")
