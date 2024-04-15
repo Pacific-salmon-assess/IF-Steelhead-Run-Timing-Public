@@ -478,7 +478,8 @@ p2_asym_french <- ggplot(data = ANormDist_extended) +
   geom_line(aes(x,y)) +
   scale_x_continuous(breaks=c(213,244, 274, 305, 335),
                      labels=c("Aug 1", "Sept 1", "Oct 1", "Nov 1", "Dec 1"), limits = c(213,335))+
-  #scale_y_continuous(breaks=c(0),labels=c(""))+
+  scale_y_continuous(labels = scales::label_comma(big.mark = ".",
+                                                  decimal.mark = ","))+
   theme(plot.title = element_text(hjust = 1))+
   xlab("Date")+
   ylab("Densité")+
@@ -809,7 +810,9 @@ q_french <- ggplot()+
   ylab("Année")+
   labs(color = "Pêche d'essai")+
   ggtitle("Normale asymmétrique hiérarchique")+
-  scale_color_discrete(labels = c("Saumon kéta", "Saumon quinnat"))
+  scale_color_discrete(labels = c("Saumon kéta", "Saumon quinnat"))+
+  scale_x_continuous(labels = scales::label_comma(big.mark = ".",
+                                                  decimal.mark = ","))
 q_french
 ggsave(file = "Outputs/3_Plots/Catchability_Hier_Asym_french.png", width = 5, height = 4)
 
