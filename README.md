@@ -3,4 +3,4 @@ Repository for code relating to Interior Fraser Steelhead run timing modelling b
 
 Data available upon request (please contact Brooke Davis)
 
-https://zenodo.org/badge/739151521.svg
+[![DOI](https://zenodo.org/badge/739151521.svg)](https://zenodo.org/doi/10.5281/zenodo.13750752)
